@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Javascript Auto complete Using Php</title>
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<style>
+    body{
+        margin: 0px auto;
+    }
+    ul{
+        list-style-type:none;
+        width: 155px;
+        position: absolute;
+
+
+    }
+    ul li{
+        height: 25px;
+        background-color: #ccc;
+        color: #fff;
+        border-bottom: 1px solid #333;
+        text-align: center;
+    }
+    .suggest {
+        display: block;
+        padding-top: -10px;
+        position: relative;
+        top: -17px;
+        left: -5px;
+    }
+</style>
+</head>
+<body>
+<label>select</label><input type="text" id="autocomplete" />
+<div id='suggest' class="suggest"></div>
+<script type="text/javascript">
+    $(document).ready(function(){
+        $('#suggest').hide();
+        $('#autocomplete').keyup(function(){
+            console.log(this.value);
+
+            $.ajax({
+                url:'php/autocomplete.php',
+                method:'POST',
+                data:'suggest='+this.value,
+                success:function(data){
+                    var suggestions  = JSON.parse(data);
+                    console.log(suggestions.length);
+                    var html = '<ul>'
+                    for(var i=0; i<suggestions.length;i++)
+                    {
+                        html += '<li><a onclick=fill_it("'+suggestions[i].firstname+'","'+suggestions[i].lastname+'") >'+suggestions[i].firstname +' '+ suggestions[i].lastname+'</li>'
+                    }
+                    html += '</ul>';
+                    $('#suggest').html(html);
+                    $('#suggest').show();
+                }
+                });
+
+        })
+    });
+    function fill_it(firstname, lastname)
+    {
+        $('#suggest').hide();
+        $('#autocomplete').val(firstname+' '+lastname);
+        console.log(firstname,lastname);
+    }
+</script>
+</body>
+</html>
