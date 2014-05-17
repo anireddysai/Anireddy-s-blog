@@ -1,0 +1,304 @@
+<div dir="ltr" style="text-align: left;" trbidi="on">
+    PHP is a powerful programming language for developing dynamic web pages. here i'm going to create a simple Login, Registration pages using OOPS in PHP.
+    <div>
+
+    Lets create a class and its object for database.</div>
+    <div class='code-part'>
+
+        &lt;?php
+
+        class DBConnection {
+
+        &nbsp; &nbsp; var $connection; &nbsp; &nbsp; &nbsp;
+        &nbsp; &nbsp; /* Class constructor */
+        &nbsp; &nbsp; function DBConnection(){
+        &nbsp; &nbsp; &nbsp; &nbsp; /* Make connection to database */
+        &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;connection = mysql_connect(DB_SERVER, DB_USER, DB_PASS) or die(mysql_error());
+        &nbsp; &nbsp; &nbsp; &nbsp; mysql_select_db(DB_NAME, $this-&gt;connection) or die(mysql_error());
+        &nbsp; &nbsp; }
+
+        &nbsp; &nbsp; function check_user_credentials($username,$password)
+        &nbsp; &nbsp; {
+        &nbsp; &nbsp; if(!get_magic_quotes_gpc()){
+        &nbsp; &nbsp; &nbsp; &nbsp; $username = addslashes($username);
+        &nbsp; &nbsp; }
+        &nbsp; &nbsp; $password = md5($password);
+        &nbsp; &nbsp; $q = "SELECT count(*) as count FROM users where username = '$username' and password = '$password'";
+        &nbsp; &nbsp; $result = $this-&gt;query($q);
+
+        &nbsp; &nbsp; $row = mysql_fetch_array($result);
+
+        &nbsp; &nbsp; if($row['count'] &gt; 0)
+        &nbsp; &nbsp; &nbsp; &nbsp; return 1; // true
+        &nbsp; &nbsp; else
+        &nbsp; &nbsp; &nbsp; &nbsp; return 0; // false;
+        &nbsp; &nbsp; }
+
+        &nbsp; &nbsp; function get_user_details($username)
+        &nbsp; &nbsp; {
+        &nbsp; &nbsp; &nbsp; &nbsp; $q = "SELECT * FROM users where username = '$username'";
+        &nbsp; &nbsp; &nbsp; &nbsp; $result = $this-&gt;query($q);
+        &nbsp; &nbsp; &nbsp; &nbsp; $row = mysql_fetch_array($result);
+        &nbsp; &nbsp; &nbsp; &nbsp; return $row;
+
+        &nbsp; &nbsp; }
+
+        &nbsp; &nbsp; function query($query){
+        &nbsp; &nbsp; &nbsp; &nbsp; return mysql_query($query, $this-&gt;connection);
+        &nbsp; &nbsp; }
+        }
+
+        $database = new DBConnection;
+
+    </div>
+
+    we have a class and its object for database. Lets create a &nbsp;form for login, later we will utilize this class for it.
+
+    &lt;div class="login-form"&gt;
+    &lt;form action="Actions.php" method="post"&gt;
+    &nbsp; &nbsp; &lt;div class='error'&gt;&lt;?php echo $errors-&gt;show_error("error"); ?&gt;&lt;/div&gt;
+    &nbsp; &nbsp; &lt;div class="form"&gt;
+    &nbsp; &nbsp; &lt;label for="username"&gt;Username :&lt;/label&gt;
+    &nbsp; &nbsp; &lt;input type="text" class="input-text" id="username" &nbsp;value="&lt;?php echo $errors-&gt; show_value('username') ?&gt;" name="username" placeholder="Enter Username" &gt;
+    &nbsp; &nbsp; &lt;br /&gt;
+    &nbsp; &nbsp; &lt;label for="password"&gt;Password :&lt;/label&gt;&lt;input type="password" value='&lt;?php echo $errors-&gt;show_value('password') ?&gt;' class="input-text" id="password" name="password" placeholder="Enter Password"&gt;&lt;br /&gt;
+    &nbsp; &nbsp; &lt;input type="submit" class="input-btn" name="user_submit_post" value="Login"&gt;
+    &nbsp; &nbsp; &lt;/div&gt;
+    &lt;/form&gt;
+    &lt;/div&gt;
+
+    I am posting all pages to one class called Actions.php, so that we will have a good organization over code. Just assume all the forms are processed in one class and no dirty code in form for processing it. you might have observe the object $errors , you just leave it now. I will explain its use in the end of this tutorial.</div>
+
+create once class for Actions.php,
+
+class Actions
+{
+&nbsp;&nbsp; &nbsp;function Actions()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; global $session,$database,$errors;
+
+&nbsp; &nbsp; &nbsp; &nbsp; if(isset($_POST['user_submit_post']))
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $username = $_POST['username'];
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $password = $_POST['password'];
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $is_logged_in = $session-&gt;login($username,$password);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if ($is_logged_in == true)
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; header("Location:".$session-&gt;last_referred);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; else{
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; header("Location:".$session-&gt;last_referred);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+
+&nbsp; &nbsp; &nbsp; &nbsp; }
+    }
+
+    $action = new Actions; // Creating object for Actions class.
+
+    We should not forgot sessions in creating a login page. Hmmm, &nbsp;so we need to create a session on login, ending sessions on logout. to keep code organized lets create a other class called session.
+
+    We will call all the database functions from session object which needs a session to maintain, so that only session class has $_SESSION 's, in the same way only DBConnection class will have all the database operation functions.</div>
+
+Lets create a session class
+
+class Session
+{
+&nbsp; &nbsp; var $is_logged_in;
+&nbsp; &nbsp; var $username;
+&nbsp; &nbsp; var $url_to_refer;
+&nbsp; &nbsp; var $last_referred;
+&nbsp; &nbsp; var $user_details = array();
+&nbsp; &nbsp; var $form_error = array();
+&nbsp; &nbsp; var $form_values = array();
+
+&nbsp; &nbsp; function Session()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; global $database;
+&nbsp; &nbsp; &nbsp; &nbsp; session_start();
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;is_logged_in = $this-&gt;check_is_logged_in();
+
+&nbsp; &nbsp; &nbsp; &nbsp; if($this-&gt;is_logged_in)
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;user_details = $database-&gt;get_user_details($this-&gt;username);
+&nbsp; &nbsp; &nbsp; &nbsp; }
+
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;check_is_errors_occur();
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;check_is_values_submitted();
+
+&nbsp; &nbsp; &nbsp; &nbsp; /* Set last visited &nbsp;page */
+&nbsp; &nbsp; &nbsp; &nbsp; if(isset($_SESSION['url']))
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;last_referred = $_SESSION['url'];
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; else
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;last_referred = "/";
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; /* Set current url */
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;url_to_refer = $_SESSION['url'] = $_SERVER['PHP_SELF'];
+
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; function check_is_logged_in()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp;if(isset($_SESSION['username']))
+&nbsp; &nbsp; &nbsp; &nbsp;{
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;$this-&gt;username = $_SESSION['username'];
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return 1;
+&nbsp; &nbsp; &nbsp; &nbsp;}
+&nbsp; &nbsp; &nbsp; &nbsp;else
+&nbsp; &nbsp; &nbsp; &nbsp;{
+&nbsp; &nbsp; &nbsp; &nbsp;return 0;
+&nbsp; &nbsp; &nbsp; &nbsp;}
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; function login($user, $password)
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; global $database,$errors;
+&nbsp; &nbsp; &nbsp; &nbsp;/* Checks that username is in database and password is correct */
+&nbsp; &nbsp; &nbsp; &nbsp; $user = stripslashes($user);
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;set_form_values($_POST);
+&nbsp; &nbsp; &nbsp; &nbsp; $result = $database-&gt;check_user_credentials($user,$password);
+
+&nbsp; &nbsp; &nbsp; &nbsp; /* Username and password correct, register session variables */
+&nbsp; &nbsp; &nbsp; &nbsp; if($result &gt; 0)
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;username &nbsp;= $_SESSION['username'] = $user;
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;is_logged_in = true;
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return true;
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; else
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $field = "error";
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;set_form_error($field, "No user found");
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return false;
+&nbsp; &nbsp; &nbsp; &nbsp; }
+
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; function logout()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; unset($_SESSION['username']);
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;is_logged_in = false;
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; function set_form_error($field, $value)
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;form_error[$field] = $_SESSION['form_errors'][$field] = &nbsp;$value;
+&nbsp; &nbsp; }
+&nbsp; &nbsp; function check_is_errors_occur()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; if(isset($_SESSION['form_errors']))
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;form_error = $_SESSION['form_errors'];
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; unset($_SESSION['form_errors']);
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; function check_is_values_submitted()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; if(isset($_SESSION['form_values']))
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;form_values = $_SESSION['form_values'];
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; unset($_SESSION['form_values']);
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; }
+&nbsp; &nbsp; function set_form_values($values)
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;form_values = $_SESSION['form_values'] = $values ;
+&nbsp; &nbsp; }
+&nbsp; &nbsp; function form_has_errors()
+&nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; if(isset($_SESSION['form_errors']))
+&nbsp; &nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;form_error = $_SESSION['form_errors'];
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $this-&gt;form_values = $_SESSION['form_values'];
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return true;
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; return false;
+&nbsp; &nbsp; }
+};
+
+Now the time to discuss about Errors class and its object, This class will used in server side validations and displaying errors on form. Errors class contains code to display error on form. these errors are displayed if we set the error in session class. for example if the page failed to login we will set "user not found." error in errors object
+
+class Errors
+{
+
+&nbsp; &nbsp;var $values = array();
+&nbsp; &nbsp;var $errors = array();
+
+&nbsp; &nbsp;/* Class constructor */
+&nbsp; &nbsp;function Errors(){
+&nbsp; &nbsp; &nbsp; /**
+&nbsp; &nbsp; &nbsp; &nbsp;* Get form value and error arrays, used when there
+&nbsp; &nbsp; &nbsp; &nbsp;* is an error with a user-submitted form.
+&nbsp; &nbsp; &nbsp; &nbsp;*/
+&nbsp; &nbsp; &nbsp; global $session;
+&nbsp; &nbsp; &nbsp; if($session-&gt;form_has_errors()){
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;$this-&gt;values = $session-&gt;form_values;
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;$this-&gt;errors = $session-&gt;form_error;
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;$this-&gt;num_errors = count($this-&gt;errors);
+
+&nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; else
+&nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;$this-&gt;num_errors = 0;
+&nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp;}
+
+&nbsp; &nbsp;function show_value($field){
+&nbsp; &nbsp; &nbsp; &nbsp;global $session;
+&nbsp; &nbsp; &nbsp; if(array_key_exists($field,$session-&gt;form_values))
+&nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return htmlspecialchars(stripslashes($session-&gt;form_values[$field]));
+&nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; else
+&nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return "";
+&nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp;}
+
+&nbsp; &nbsp;function show_error($err){
+&nbsp; &nbsp; global $session;
+&nbsp; &nbsp; &nbsp; if(array_key_exists($err,$session-&gt;form_error))
+&nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return $session-&gt;form_error[$err];
+&nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; else
+&nbsp; &nbsp; &nbsp; {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return '';
+&nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp;}
+
+};
+$errors = new Errors;
+
+?&gt;
+
+How these errors class track the errors produced in form. look at the below code
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $field = "error";
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $session-&gt;set_form_error($field, "No user found");
+<div>
+
+</div>
+<div>
+    we are setting a errors in sessions object when an error occur.&nbsp;</div>
+<div>
+
+</div>
+<div>
+    call $errors-&gt;('fieldname') to dispay the error in form.</div>
+<div>
+    in this case it is</div>
+<div>
+
+</div>
+<div>
+    $erors-&gt;('user');</div>
+<div>
+</div>
+</div>
+</div>

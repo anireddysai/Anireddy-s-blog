@@ -1,0 +1,80 @@
+html,body
+{
+    margin: 0 auto;
+}
+#page-wrapper
+{
+    width:100;
+}
+.login-form
+{
+    text-align: center;
+    position: fixed;
+    top: 30%;
+    border: 1px solid teal;
+    border-radius: 10px;
+    height: 205px;
+    width: 429px;
+    padding-top: 6%;
+    margin-left: 33%;
+
+}
+.register-form
+{
+    text-align: center;
+    position: fixed;
+    top: 20%;
+    border: 1px solid teal;
+    border-radius: 10px;
+    height: 305px;
+    width: 429px;
+    padding-top: 6%;
+    margin-left: 33%;
+
+}
+
+.input-text
+{
+    width: 180px;
+    border-radius: 5px;
+    height: 32px;
+    padding: 0px;
+    margin: 9px;
+}
+.input-btn
+{
+  width:50px;
+  color:crimson;
+  text-align: center;
+}
+.input-btn
+{
+    width: 90px;
+    height: 34px;
+    background-color: #cccccc;
+    border: 0px;
+    text-align: center;
+    border-radius: 15px;
+}
+.error
+{
+    color: red;
+    font-size: 14px;
+}
+.hello
+{
+    color: #222222;
+    font-size: 15px;
+    float:  left;
+}
+.logout
+{
+ float: left;
+ padding-left: 15px;
+}
+.user-profile
+{
+    width: 500px;
+    position: absolute;
+    padding: 10 10 10 10;
+}
