@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JS Validation library</title>
+    <script type="text/javascript" src="scripts/plugin.js"></script>
+</head>
+<body onload=init()>
+<form action="#">
+<input type="text" id='email' name="email">
+<input type="text" id='name' name="name">
+<input type="submit" onclick="return O.validate()">
+</form>
+</body>
+<script>
+    function init(){
+    O.rules = [
+        {
+         id:'email',
+         validate: O.types.email,
+         display:'Not a valid email'
+        },
+        {
+         id:'name',
+         validate: O.types.alphabets,
+         display:'Not a valid Test'
+        }
+
+    ]
+    }
+</script>
+</html>
